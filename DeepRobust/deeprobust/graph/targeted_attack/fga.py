@@ -111,6 +111,11 @@ class FGA(BaseAttack):
             value = -2*modified_adj[target_node][grad_argmax] + 1
             modified_adj.data[target_node][grad_argmax] += value
             modified_adj.data[grad_argmax][target_node] += value
+            
+            if value > 0:
+                print(value, "Edge added between nodes", target_node, "and", grad_argmax)
+            else:
+                print(value, "Edge removed between nodes", target_node, "and", grad_argmax)
 
             if self.attack_features:
                 pass

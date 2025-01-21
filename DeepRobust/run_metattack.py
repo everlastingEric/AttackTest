@@ -19,7 +19,8 @@ surrogate = GCN(nfeat=features.shape[1], nclass=labels.max().item()+1, nhid=16,
 surrogate = surrogate.to(device)
 surrogate.fit(features, adj, labels, idx_train)
 
-model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, device=device)
+model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, attack_structure=True,
+attack_features=False, device=device)
 model = model.to(device)
 perturbations = int(0.05 * (adj.sum() // 2))
 model.attack(features, adj, labels, idx_train, idx_unlabeled, perturbations, ll_constraint=False)

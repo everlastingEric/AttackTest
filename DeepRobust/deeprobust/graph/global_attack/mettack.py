@@ -340,12 +340,17 @@ class Metattack(BaseMeta):
         modified_adj = ori_adj
         modified_features = ori_features
 
+        changes_list = []
+
         for i in tqdm(range(n_perturbations), desc="Perturbing graph"):
+
             if self.attack_structure:
                 modified_adj = self.get_modified_adj(ori_adj)
 
             if self.attack_features:
                 modified_features = ori_features + self.feature_changes
+
+            prev = modified_adj.clone()
 
             adj_norm = utils.normalize_adj_tensor(modified_adj)
             self.inner_train(modified_features, adj_norm, idx_train, idx_unlabeled, labels)
@@ -369,6 +374,20 @@ class Metattack(BaseMeta):
                 feature_meta_argmax = torch.argmax(feature_meta_score)
                 row_idx, col_idx = utils.unravel_index(feature_meta_argmax, ori_features.shape)
                 self.feature_changes.data[row_idx][col_idx] += (-2 * modified_features[row_idx][col_idx] + 1)
+                
+            new = self.get_modified_adj(ori_adj)
+            diff = new - prev
+            change = torch.nonzero(diff != 0, as_tuple=True)
+
+            for row, col in zip(*change):
+                change_detail = [i, row, col]
+                if prev[row, col] == 0 and new[row, col] == 1:
+                    change_detail.append(1)
+                    print(i, ": edges added between", row, "and", col)
+                else:
+                    change_detail.append(0)
+                    print(i, ": edges removed between", row, "and", col)
+                changes_list.append(change_detail)
 
         if self.attack_structure:
             self.modified_adj = self.get_modified_adj(ori_adj).detach()
