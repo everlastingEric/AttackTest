@@ -1,1 +1,2 @@
 # AttackTest
+This repository is used to collect data and analyze the cascading spread of wrongful node classifications in a graph neural network during adversarial attacks. The graph attack algorithms used are originally developed as a part of the DeepRobust repository by DSE-MSU as found here: https://github.com/DSE-MSU/DeepRobust, and modified by me for the purpose of collecting data during each perturbation in an attack.
