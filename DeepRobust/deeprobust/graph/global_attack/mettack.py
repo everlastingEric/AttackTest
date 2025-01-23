@@ -346,11 +346,12 @@ class Metattack(BaseMeta):
 
             if self.attack_structure:
                 modified_adj = self.get_modified_adj(ori_adj)
+            prevAdj = modified_adj.clone()
 
             if self.attack_features:
                 modified_features = ori_features + self.feature_changes
+            prevFt = modified_features.clone()
 
-            prev = modified_adj.clone()
 
             adj_norm = utils.normalize_adj_tensor(modified_adj)
             self.inner_train(modified_features, adj_norm, idx_train, idx_unlabeled, labels)
@@ -374,25 +375,40 @@ class Metattack(BaseMeta):
                 feature_meta_argmax = torch.argmax(feature_meta_score)
                 row_idx, col_idx = utils.unravel_index(feature_meta_argmax, ori_features.shape)
                 self.feature_changes.data[row_idx][col_idx] += (-2 * modified_features[row_idx][col_idx] + 1)
-                
-            new = self.get_modified_adj(ori_adj)
-            diff = new - prev
-            change = torch.nonzero(diff != 0, as_tuple=True)
 
-            for row, col in zip(*change):
-                change_detail = [i, row, col]
-                if prev[row, col] == 0 and new[row, col] == 1:
-                    change_detail.append(1)
-                    print(i, ": edges added between", row, "and", col)
-                else:
-                    change_detail.append(0)
-                    print(i, ": edges removed between", row, "and", col)
-                changes_list.append(change_detail)
+            if self.attack_structure:
+                newAdj = self.get_modified_adj(ori_adj)
+                diffAdj = newAdj - prevAdj
+                adjChange = torch.nonzero(diffAdj != 0, as_tuple=True)
 
-        if self.attack_structure:
-            self.modified_adj = self.get_modified_adj(ori_adj).detach()
-        if self.attack_features:
-            self.modified_features = self.get_modified_features(ori_features).detach()
+                for row, col in zip(*adjChange):
+                    change_detail = [i, "structure", row, col]
+                    if prevAdj[row, col] == 0 and newAdj[row, col] == 1:
+                        change_detail.append(1)
+                        print(i, ": edges added between", row, "and", col)
+                    else:
+                        change_detail.append(0)
+                        print(i, ": edges removed between", row, "and", col)
+                    changes_list.append(change_detail)
+
+                self.modified_adj = self.get_modified_adj(ori_adj).detach()
+
+            if self.attack_features:
+                newFt = self.get_modified_features(ori_features)
+                diffFt = newFt - prevFt
+                ftChange = torch.nonzero(diffFt != 0, as_tuple=True)
+
+                for row, col in zip(*ftChange):
+                    change_detail = [i, "feature", row, col]
+                    if prevFt[row, col].item() == 0 and newFt[row, col].item() == 1:
+                        change_detail.append(1)
+                        print(i, ": feature added at node", row, "index", col)
+                    else:
+                        change_detail.append(0)
+                        print(i, ": feature removed at node", row, "idex", col)
+                    changes_list.append(change_detail)
+
+                self.modified_features = self.get_modified_features(ori_features).detach()
 
 
 class MetaApprox(BaseMeta):
