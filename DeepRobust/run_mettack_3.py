@@ -59,7 +59,7 @@ def run_attack(useGCN, attack_structure):
   pickle_name = "attack_tracking_" + "pubmed_" + attack_type + "_" + architecture + "_full_data.pkl"
   model.save_tracking_data(csv_name, pickle_name)
 
-  folder_path = '/content/drive/MyDrive/group-work/Development/mettack-results'
+  folder_path = '/home/yshen349/AttackTest/DeepRobust/mettack_results'
   os.makedirs(folder_path, exist_ok=True)
 
   csv_path = os.path.join(folder_path, csv_name)
@@ -77,9 +77,3 @@ def run_attack(useGCN, attack_structure):
 
 torch.cuda.empty_cache()
 run_attack(True, True)
-# torch.cuda.empty_cache()
-# run_attack(True, False)
-# torch.cuda.empty_cache()
-# run_attack(False, True)
-# torch.cuda.empty_cache()
-# run_attack(False, False)
