@@ -26,67 +26,57 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def run_attack(useGCN, attack_structure):
 
   # Setup Surrogate Model
-    surrogate = GCN(nfeat=features.shape[1],
-                      nclass=labels.max().item()+1,
-                                        nhid=16,
-                                                          dropout=0.5,
-                                                                            with_relu=False,
-                                                                                              with_bias=True,
-                                                                                                                weight_decay=5e-4,
-                                                                                                                                  device=device)
-    if useGCN else MetattackGAT(nfeat=features.shape[1],
-                                                                     nhid=8,
-                                                                                                                                  nclass=labels.max().item()
-                                                                                                                                  +
-                                                                                                                                  1,
-                                                                                                                                                                                               heads=8,
-                                                                                                                                                                                                                                                            dropout=0.5,
-                                                                                                                                                                                                                                                                                                                         device=device)
+  surrogate = GCN(nfeat=features.shape[1],
+                  nclass=labels.max().item()+1,
+                  nhid=16,
+                  dropout=0.5,
+                  with_relu=False,
+                  with_bias=True,
+                  weight_decay=5e-4,
+                  device=device) if useGCN else MetattackGAT(nfeat=features.shape[1],
+                                                             nhid=8,
+                                                             nclass=labels.max().item() + 1,
+                                                             heads=8,
+                                                             dropout=0.5,
+                                                             device=device)
 
-          surrogate = surrogate.to(device)
-            if useGCN:
-                    surrogate.fit(features, adj, labels, idx_train)
-                      else:
-                              surrogate.fit(features, adj, labels, idx_train, verbose=True)
+  surrogate = surrogate.to(device)
+  if useGCN:
+    surrogate.fit(features, adj, labels, idx_train)
+  else:
+    surrogate.fit(features, adj, labels, idx_train, verbose=True)
 
-                                model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape,
-                                attack_structure=attack_structure, attack_features=(not attack_structure),
-                                device=device)
-                                  model = model.to(device)
-                                    #perturbations = int(0.05 * (adj.sum() // 2))
-                                      perturbations = 5
-                                        model.attack(features, adj, labels, idx_train, idx_unlabeled,perturbations,
-                                        ll_constraint=False)
+  model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, attack_structure=attack_structure, attack_features=(not attack_structure), device=device)
+  model = model.to(device)
+  #perturbations = int(0.05 * (adj.sum() // 2))
+  perturbations = 5
+  model.attack(features, adj, labels, idx_train, idx_unlabeled,perturbations, ll_constraint=False)
 
-                                          # save tracked data to google drive
-                                            architecture = "GCN" if useGCN else "GAT"
-                                              attack_type = "structure" if attack_structure else "features"
-                                                csv_name = "attack_tracking_" + "pubmed_" + attack_type + "_" +
-                                                architecture + ".csv"
-                                                  pickle_name = "attack_tracking_" + "pubmed_" + attack_type + "_" +
-                                                  architecture + "_full_data.pkl"
-                                                    model.save_tracking_data(csv_name, pickle_name)
+  # save tracked data to google drive
+  architecture = "GCN" if useGCN else "GAT"
+  attack_type = "structure" if attack_structure else "features"
+  csv_name = "attack_tracking_" + "pubmed_" + attack_type + "_" + architecture + ".csv"
+  pickle_name = "attack_tracking_" + "pubmed_" + attack_type + "_" + architecture + "_full_data.pkl"
+  model.save_tracking_data(csv_name, pickle_name)
 
-                                                      folder_path =
-                                                      '/content/drive/MyDrive/group-work/Development/mettack-results'
-                                                        os.makedirs(folder_path, exist_ok=True)
+  folder_path = '/content/drive/MyDrive/group-work/Development/mettack-results'
+  os.makedirs(folder_path, exist_ok=True)
 
-                                                          csv_path = os.path.join(folder_path, csv_name)
-                                                            pickle_path = os.path.join(folder_path, pickle_name)
+  csv_path = os.path.join(folder_path, csv_name)
+  pickle_path = os.path.join(folder_path, pickle_name)
 
-                                                              model.save_tracking_data(csv_path, pickle_path)
+  model.save_tracking_data(csv_path, pickle_path)
 
-                                                                df = pd.read_csv(csv_path)
-                                                                  print("\nTracking data from CSV:")
-                                                                    print(df)
+  df = pd.read_csv(csv_path)
+  print("\nTracking data from CSV:")
+  print(df)
 
-                                                                      with open(pickle_path, 'rb') as f:
-                                                                          full_data = pickle.load(f)
-                                                                            print("\nKeys in pickle file:",
-                                                                            full_data.keys())
+  with open(pickle_path, 'rb') as f:
+    full_data = pickle.load(f)
+  print("\nKeys in pickle file:", full_data.keys())
 
-                                                                            torch.cuda.empty_cache()
-                                                                            run_attack(True, True)
+torch.cuda.empty_cache()
+run_attack(True, True)
 # torch.cuda.empty_cache()
 # run_attack(True, False)
 # torch.cuda.empty_cache()
