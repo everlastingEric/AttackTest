@@ -84,6 +84,7 @@ print(f"After moving to device - features device: {features.device}")
 print(f"After moving to device - labels device: {labels.device}")
 
 def run_attack(useGCN, attack_structure):
+    global features, adj, labels
     print("\nInitializing surrogate model...")
     # Setup Surrogate Model
     surrogate = GCN(nfeat=features.shape[1],
@@ -112,7 +113,7 @@ def run_attack(useGCN, attack_structure):
         surrogate.fit(features, adj, labels, idx_train, verbose=True)
     
     print("\nInitializing Metattack model...")
-     model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, attack_structure=attack_structure, attack_features=(not attack_structure), device=device)
+    model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, attack_structure=attack_structure, attack_features=(not attack_structure), device=device)
     
     # CRITICAL: Verify the attack model is on GPU
     model = model.to(device)
@@ -129,8 +130,12 @@ def run_attack(useGCN, attack_structure):
     perturbations = 5
     print(f"Performing attack with {perturbations} perturbations")
     
+    features = features.to(device)
+    adj = adj.to(device)
+    labels = labels.to(device)
+
     # CRITICAL: Force inputs to be on GPU right before calling attack
-     model.attack(features, adj, labels, idx_train, idx_unlabeled,perturbations, ll_constraint=False)
+    model.attack(features, adj, labels, idx_train, idx_unlabeled,perturbations, ll_constraint=False)
 
     
     # Create filenames
