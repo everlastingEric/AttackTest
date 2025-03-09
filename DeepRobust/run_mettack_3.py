@@ -1,16 +1,22 @@
 import torch
 import numpy as np
-import torch.nn.functional as F
-import torch.optim as optim
+import os
 from deeprobust.graph.defense import GCN
 from deeprobust.graph.defense import MettackGAT
-from deeprobust.graph.global_attack import MetaApprox, Metattack
+from deeprobust.graph.global_attack import Metattack
 from deeprobust.graph.utils import *
 from deeprobust.graph.data import Dataset
-import argparse
-import os
 import pandas as pd
 import pickle
+
+# Print CUDA device information
+print(f"CUDA available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    print(f"CUDA device count: {torch.cuda.device_count()}")
+    for i in range(torch.cuda.device_count()):
+        print(f"CUDA device {i} name: {torch.cuda.get_device_name(i)}")
+    # Note: CUDA_VISIBLE_DEVICES will be automatically respected by PyTorch
+    print(f"Current CUDA device: {torch.cuda.current_device()}")
 
 # Set the data directory with proper Unix path
 data_dir = '/tmp/'
@@ -26,8 +32,10 @@ adj, features, labels = data.adj, data.features, data.labels
 idx_train, idx_val, idx_test = data.idx_train, data.idx_val, data.idx_test
 idx_unlabeled = np.union1d(idx_val, idx_test)
 
-# Preprocess and move to device
+# Preprocess data
 adj, features, labels = preprocess(adj, features, labels, preprocess_adj=False)
+
+# Set device - PyTorch will respect CUDA_VISIBLE_DEVICES automatically
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
@@ -35,11 +43,6 @@ print(f"Using device: {device}")
 features = features.to(device)
 adj = adj.to(device)
 labels = labels.to(device)
-
-# Print device info to verify
-print(f"Features device: {features.device}")
-print(f"Adj device: {adj.device}")
-print(f"Labels device: {labels.device}")
 
 def run_attack(useGCN, attack_structure):
     # Setup Surrogate Model
@@ -72,6 +75,7 @@ def run_attack(useGCN, attack_structure):
     # Print GPU memory status
     if torch.cuda.is_available():
         print(f"GPU memory allocated: {torch.cuda.memory_allocated(0) / 1e9:.2f} GB")
+        print(f"GPU memory reserved: {torch.cuda.memory_reserved(0) / 1e9:.2f} GB")
     
     # Set perturbations
     perturbations = 5
