@@ -49,6 +49,10 @@ print(f"Before preprocessing - labels device: {labels.device if hasattr(labels, 
 print("Preprocessing data...")
 adj, features, labels = preprocess(adj, features, labels, preprocess_adj=False)
 
+features = features.cpu()
+adj = adj.cpu()
+labels = labels.cpu()
+
 # CRITICAL: Force device to be CUDA if available, regardless of preprocess function behavior
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Selected device: {device}")
@@ -83,18 +87,19 @@ def run_attack(useGCN, attack_structure):
     print("\nInitializing surrogate model...")
     # Setup Surrogate Model
     surrogate = GCN(nfeat=features.shape[1],
-                    nclass=labels.max().item()+1,
-                    nhid=16,
-                    dropout=0.5,
-                    with_relu=False,
-                    with_bias=True,
-                    weight_decay=5e-4,
-                    device=device) if useGCN else MettackGAT(nfeat=features.shape[1],
-                                                           nhid=8,
-                                                           nclass=labels.max().item() + 1,
-                                                           heads=8,
-                                                           dropout=0.5,
-                                                           device=device)
+                  nclass=labels.max().item()+1,
+                  nhid=16,
+                  dropout=0.5,
+                  with_relu=False,
+                  with_bias=True,
+                  weight_decay=5e-4,
+                  device=device) if useGCN else MetattackGAT(nfeat=features.shape[1],
+                                                             nhid=8,
+                                                             nclass=labels.max().item() + 1,
+                                                             heads=8,
+                                                             dropout=0.5,
+                                                             device=device)
+
     
     # CRITICAL: Verify the model is on GPU
     surrogate = surrogate.to(device)
@@ -107,9 +112,7 @@ def run_attack(useGCN, attack_structure):
         surrogate.fit(features, adj, labels, idx_train, verbose=True)
     
     print("\nInitializing Metattack model...")
-    model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, 
-                     attack_structure=attack_structure, attack_features=(not attack_structure), 
-                     device=device)
+     model = Metattack(model=surrogate, nnodes=adj.shape[0], feature_shape=features.shape, attack_structure=attack_structure, attack_features=(not attack_structure), device=device)
     
     # CRITICAL: Verify the attack model is on GPU
     model = model.to(device)
@@ -127,12 +130,8 @@ def run_attack(useGCN, attack_structure):
     print(f"Performing attack with {perturbations} perturbations")
     
     # CRITICAL: Force inputs to be on GPU right before calling attack
-    model.attack(features.to("cpu"), adj.to("cpu"), labels.to("cpu"), 
-                idx_train, idx_unlabeled, perturbations, ll_constraint=False)
+     model.attack(features, adj, labels, idx_train, idx_unlabeled,perturbations, ll_constraint=False)
 
-    adj = adj.to(device)
-    features = features.to(device)
-    labels = labels.to(device)
     
     # Create filenames
     architecture = "GCN" if useGCN else "GAT"
