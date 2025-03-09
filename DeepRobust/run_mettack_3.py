@@ -127,8 +127,12 @@ def run_attack(useGCN, attack_structure):
     print(f"Performing attack with {perturbations} perturbations")
     
     # CRITICAL: Force inputs to be on GPU right before calling attack
-    model.attack(features.to(device), adj.to(device), labels.to(device), 
+    model.attack(features.to("cpu"), adj.to("cpu"), labels.to("cpu"), 
                 idx_train, idx_unlabeled, perturbations, ll_constraint=False)
+
+    adj = adj.to(device)
+    features = features.to(device)
+    labels = labels.to(device)
     
     # Create filenames
     architecture = "GCN" if useGCN else "GAT"
